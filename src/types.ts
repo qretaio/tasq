@@ -6,6 +6,7 @@ export interface Task {
   description: string;
   goal?: string;
   id?: string;
+  section?: string;
 }
 
 export interface ParsedTasks {

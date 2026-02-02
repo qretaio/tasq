@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
 import { spawn } from 'node:child_process';
-import { groupTasksByStatus, type TaskStatus } from './types.js';
+import { groupTasksByStatus, type TaskStatus, type Task } from './types.js';
 import {
   getRepoBase,
   readTasks,
@@ -13,6 +13,73 @@ import {
   buildOrchestratorPrompt,
 } from './core.js';
 import { getScanPaths, addScanPath } from './config.js';
+
+interface RenderOptions {
+  showCompleted?: boolean;
+  maxItems?: number;
+  getId?: (task: Task) => string;
+}
+
+function renderTasksGrouped(
+  tasks: Task[],
+  options: RenderOptions = {}
+): { pending: number; inProgress: number; completed: number } {
+  const { showCompleted = true, maxItems, getId } = options;
+
+  // Group by section
+  const tasksBySection = new Map<string, Task[]>();
+  for (const task of tasks) {
+    const section = task.section || 'other';
+    if (!tasksBySection.has(section)) {
+      tasksBySection.set(section, []);
+    }
+    tasksBySection.get(section)!.push(task);
+  }
+
+  let totalPending = 0;
+  let totalInProgress = 0;
+  let totalCompleted = 0;
+
+  // Display each section
+  for (const [section, sectionTasks] of tasksBySection) {
+    const grouped = groupTasksByStatus(sectionTasks);
+    totalPending += grouped.pending.length;
+    totalInProgress += grouped.inProgress.length;
+    totalCompleted += grouped.completed.length;
+
+    // Skip if only completed and not showing all
+    if (grouped.pending.length === 0 && grouped.inProgress.length === 0 && !showCompleted) {
+      continue;
+    }
+
+    const sectionTitle = section.charAt(0).toUpperCase() + section.slice(1);
+    console.log(`## ${sectionTitle}`);
+
+    const activeTasks = [...grouped.pending, ...grouped.inProgress];
+    const toShow = maxItems !== undefined ? activeTasks.slice(0, maxItems) : activeTasks;
+
+    for (const task of toShow) {
+      const icon = task.status === 'pending' ? '○' : task.status === 'in-progress' ? '→' : '✓';
+      const id = getId ? `[${getId(task)}] ` : '';
+      console.log(`  ${icon} ${id}${task.description}`);
+    }
+
+    if (maxItems !== undefined && activeTasks.length > maxItems) {
+      console.log(`  ... and ${activeTasks.length - maxItems} more`);
+    }
+
+    if (showCompleted && grouped.completed.length > 0) {
+      for (const task of grouped.completed) {
+        const id = getId ? `[${getId(task)}] ` : '';
+        console.log(`  ✓ ${id}${task.description}`);
+      }
+    }
+
+    console.log();
+  }
+
+  return { pending: totalPending, inProgress: totalInProgress, completed: totalCompleted };
+}
 
 export async function cmdInit(args: {
   name?: string;
@@ -51,53 +118,15 @@ export async function cmdList(args: {
       console.log(`${parsed.description}\n`);
     }
 
-    const { pending, inProgress, completed } = groupTasksByStatus(parsed.goals);
-
-    if (pending.length > 0) {
-      console.log('## Goals');
-      for (const goal of pending) {
-        console.log(`  ○ ${goal.description}`);
-      }
-      console.log();
-    }
-
-    if (inProgress.length > 0) {
-      console.log('## Goals (In Progress)');
-      for (const goal of inProgress) {
-        console.log(`  → ${goal.description}`);
-      }
-      console.log();
-    }
-
-    const tasks = groupTasksByStatus(parsed.tasks);
-
-    if (tasks.pending.length > 0) {
-      console.log('## Pending');
-      for (const task of tasks.pending) {
-        const goal = task.goal ? ` (${task.goal})` : '';
-        console.log(`  ○ ${task.description}${goal}`);
-      }
-      console.log();
-    }
-
-    if (tasks.inProgress.length > 0) {
-      console.log('## In Progress');
-      for (const task of tasks.inProgress) {
-        console.log(`  → ${task.description}`);
-      }
-      console.log();
-    }
-
-    if (tasks.completed.length > 0 && !args.pending) {
-      console.log('## Completed');
-      for (const task of tasks.completed) {
-        console.log(`  ✓ ${task.description}`);
-      }
-      console.log();
-    }
+    // Combine goals and tasks for unified display
+    const allTasks = [...parsed.goals, ...parsed.tasks];
+    const counts = renderTasksGrouped(allTasks, {
+      showCompleted: !args.pending,
+      getId: (t) => String(t.line),
+    });
 
     console.log(
-      `  ${tasks.pending.length} pending, ${tasks.inProgress.length} in progress, ${tasks.completed.length} completed\n`
+      `  ${counts.pending} pending, ${counts.inProgress} in progress, ${counts.completed} completed\n`
     );
     return;
   }
@@ -125,15 +154,17 @@ export async function cmdList(args: {
     if (grouped.pending.length > 0 || grouped.inProgress.length > 0 || args.all) {
       console.log(`\n## ${projectName} (${repoId}) ${relPath}`);
 
-      const activeTasks = tasks.filter((t) => t.status !== 'completed');
-      for (const task of activeTasks.slice(0, args.all ? undefined : 5)) {
-        console.log(
-          `    ${task.status === 'pending' ? '○' : '→'} [${task.id}] ${task.description}`
-        );
-      }
-      if (!args.all && activeTasks.length > 5) {
-        console.log(`    ... and ${activeTasks.length - 5} more`);
-      }
+      // Indent section rendering for nested display
+      const originalLog = console.log;
+      console.log = (...args: unknown[]) => originalLog('  ', ...args);
+
+      renderTasksGrouped(tasks, {
+        showCompleted: args.all ?? false,
+        maxItems: args.all ? undefined : 5,
+        getId: (t) => t.id!,
+      });
+
+      console.log = originalLog;
 
       console.log(
         `  ${grouped.pending.length} pending, ${grouped.inProgress.length} in progress, ${grouped.completed.length} completed`

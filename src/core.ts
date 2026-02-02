@@ -12,7 +12,7 @@ import {
   type ParsedTasks,
   type ProjectResult,
 } from './types.js';
-import { parseTasks, parseContextSection, generateRepoIds } from './parser.js';
+import { parseTasks, parseContextSection, generateRepoIds, parseTasksSection } from './parser.js';
 import { gatherFullContext } from './context.js';
 
 const TASKS_MD = 'TASKS.md';
@@ -55,25 +55,43 @@ export async function updateTaskStatus(
 }
 
 export async function scanAllTasks(scanPaths: string[]): Promise<ProjectResult[]> {
-  const patterns = scanPaths.map((p) => {
+  // Scan both TASKS.md and README.md files
+  const tasksPatterns = scanPaths.map((p) => {
     const basePath = p.replace(/^~/, homedir());
     return `${basePath}/**/TASKS.md`;
   });
 
-  const files = await fg(patterns, {
-    absolute: true,
-    onlyFiles: true,
-    deep: 3,
-    ignore: ['**/node_modules/**', '**/target/**', '**/dist/**', '**/.git/**'],
+  const readmePatterns = scanPaths.map((p) => {
+    const basePath = p.replace(/^~/, homedir());
+    return `${basePath}/**/README.md`;
   });
 
-  // Parallel file reading
-  const results = await Promise.all(
-    files.map(async (file) => {
+  const [tasksFiles, readmeFiles] = await Promise.all([
+    fg(tasksPatterns, {
+      absolute: true,
+      onlyFiles: true,
+      deep: 3,
+      ignore: ['**/node_modules/**', '**/target/**', '**/dist/**', '**/.git/**'],
+    }),
+    fg(readmePatterns, {
+      absolute: true,
+      onlyFiles: true,
+      deep: 3,
+      ignore: ['**/node_modules/**', '**/target/**', '**/dist/**', '**/.git/**'],
+    }),
+  ]);
+
+  // Track project dirs to avoid duplicates (prefer TASKS.md over README.md)
+  const seenProjectDirs = new Set<string>();
+
+  // Process TASKS.md files
+  const tasksResults = await Promise.all(
+    tasksFiles.map(async (file) => {
       try {
         const content = await readFile(file, 'utf-8');
         const parsed = parseTasks(content);
         const projectDir = dirname(file);
+        seenProjectDirs.add(projectDir);
         const projectName = basename(projectDir);
         const relPath = projectDir.replace(homedir(), '~');
         return { path: file, projectName, relPath, parsed, tasks: parsed.tasks };
@@ -83,7 +101,27 @@ export async function scanAllTasks(scanPaths: string[]): Promise<ProjectResult[]
     })
   );
 
-  return results.filter((r): r is ProjectResult => r !== null);
+  // Process README.md files (only if no TASKS.md in same dir)
+  const readmeResults = await Promise.all(
+    readmeFiles.map(async (file) => {
+      try {
+        const projectDir = dirname(file);
+        if (seenProjectDirs.has(projectDir)) return null; // Skip if TASKS.md exists
+
+        const content = await readFile(file, 'utf-8');
+        const parsed = parseTasksSection(content);
+        if (parsed.tasks.length === 0) return null; // Skip if no tasks found
+
+        const projectName = basename(projectDir);
+        const relPath = projectDir.replace(homedir(), '~');
+        return { path: file, projectName, relPath, parsed, tasks: parsed.tasks };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return [...tasksResults, ...readmeResults].filter((r): r is ProjectResult => r !== null);
 }
 
 export async function scanAllTasksWithIds(

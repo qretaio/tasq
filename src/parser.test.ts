@@ -43,20 +43,25 @@ Some notes here
     assert.strictEqual(parsed.goals[1].status, 'completed');
   });
 
-  it('parseTasks: tasks with all statuses', () => {
-    assert.strictEqual(parsed.tasks.length, 3);
-    assert.strictEqual(parsed.tasks[0].description, 'Pending task');
-    assert.strictEqual(parsed.tasks[0].status, 'pending');
-    assert.strictEqual(parsed.tasks[1].description, 'In-progress task');
-    assert.strictEqual(parsed.tasks[1].status, 'in-progress');
-    assert.strictEqual(parsed.tasks[2].description, 'Completed task');
-    assert.strictEqual(parsed.tasks[2].status, 'completed');
+  it('parseTasks: tasks with all sections included', () => {
+    // All sections contribute to tasks: 2 goals + 3 tasks = 5 total
+    assert.strictEqual(parsed.tasks.length, 5);
+    // First 2 are from goals
+    assert.strictEqual(parsed.tasks[0].description, 'Goal one');
+    assert.strictEqual(parsed.tasks[0].section, 'goals');
+    // Last 3 are from tasks section
+    assert.strictEqual(parsed.tasks[2].description, 'Pending task');
+    assert.strictEqual(parsed.tasks[2].section, 'tasks');
+    assert.strictEqual(parsed.tasks[3].description, 'In-progress task');
+    assert.strictEqual(parsed.tasks[4].description, 'Completed task');
   });
 
   it('parseTasks: line numbers', () => {
-    assert.strictEqual(parsed.tasks[0].line, 14);
-    assert.strictEqual(parsed.tasks[1].line, 15);
-    assert.strictEqual(parsed.tasks[2].line, 16);
+    // Goals at lines 9, 10
+    assert.strictEqual(parsed.tasks[0].line, 9);
+    assert.strictEqual(parsed.tasks[1].line, 10);
+    // Tasks section at lines 14, 15, 16
+    assert.strictEqual(parsed.tasks[2].line, 14);
   });
 
   it('parseContextSection: files and repos', () => {
