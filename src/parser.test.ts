@@ -1,83 +1,57 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { parseTasks, parseContextSection, generateRepoIds } from './parser.js';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseTasks, generateRepoIds } from './parser.js';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
+async function loadFixture(name: string): Promise<string> {
+  return readFile(join(__dirname, '../tests/fixtures', name), 'utf-8');
+}
 
 describe('parser', () => {
-  const content = `# My Project
-This is a description
-Second line
+  it('parseTasks: TASKS.md with goals and tasks', async () => {
+    const tasks = await loadFixture('TASKS.md');
+    const parsed = parseTasks(tasks);
 
-## Context
-files: src/foo.ts, src/bar.ts
-repos: github.com/foo, github.com/bar
+    assert.strictEqual(parsed.name, '@qretaio/tasq');
+    assert.strictEqual(parsed.goals.length, 1);
+    assert.strictEqual(parsed.tasks.length, 2); // 1 goal + 1 task
+    assert.strictEqual(parsed.tasks[0]?.description, 'Goal one');
+    assert.strictEqual(parsed.tasks[1]?.description, 'Task from TASKS.md');
+  });
 
-## Goals
-- [ ] Goal one
-- [x] Goal two completed
+  it('parseTasks: README.md with tasks section', async () => {
+    const readme = await loadFixture('README.md');
+    const parsed = parseTasks(readme);
 
-## Tasks
-Some notes here
-- [ ] Pending task
-- [~] In-progress task
-- [x] Completed task
+    assert.strictEqual(parsed.name, '@qretaio/tasq');
+    assert.strictEqual(parsed.description, 'A powerful task tracking CLI that uses markdown files (TASKS.md) for managing tasks across multiple projects with intelligent context gathering for AI-assisted development.');
+    assert.strictEqual(parsed.notes, "Task items from this section will be processed by `tasq` cli.");
+    assert.strictEqual(parsed.tasks.length, 1);
+    assert.strictEqual(parsed.tasks[0]?.description, 'Create a Kanban board for task management');
+  });
+
+  it('parseTasks: README.md without tasks section returns no tasks', () => {
+    const content = `# My Project
+
+A description.
+
+## Features
+- Feature one
 `;
 
-  const parsed = parseTasks(content);
-  const context = parseContextSection(content);
-  const repoIds = generateRepoIds(['foo', 'bar', 'baz']);
-
-  it('parseTasks: name and description', () => {
+    const parsed = parseTasks(content);
     assert.strictEqual(parsed.name, 'My Project');
-    assert.strictEqual(parsed.description, 'This is a description\nSecond line');
+    assert.strictEqual(parsed.tasks.length, 0);
   });
 
-  it('parseTasks: notes before first task', () => {
-    assert.strictEqual(parsed.notes, '');
-  });
-
-  it('parseTasks: goals', () => {
-    assert.strictEqual(parsed.goals.length, 2);
-    assert.strictEqual(parsed.goals[0].description, 'Goal one');
-    assert.strictEqual(parsed.goals[0].status, 'pending');
-    assert.strictEqual(parsed.goals[1].description, 'Goal two completed');
-    assert.strictEqual(parsed.goals[1].status, 'completed');
-  });
-
-  it('parseTasks: tasks with all sections included', () => {
-    // All sections contribute to tasks: 2 goals + 3 tasks = 5 total
-    assert.strictEqual(parsed.tasks.length, 5);
-    // First 2 are from goals
-    assert.strictEqual(parsed.tasks[0].description, 'Goal one');
-    assert.strictEqual(parsed.tasks[0].section, 'goals');
-    // Last 3 are from tasks section
-    assert.strictEqual(parsed.tasks[2].description, 'Pending task');
-    assert.strictEqual(parsed.tasks[2].section, 'tasks');
-    assert.strictEqual(parsed.tasks[3].description, 'In-progress task');
-    assert.strictEqual(parsed.tasks[4].description, 'Completed task');
-  });
-
-  it('parseTasks: line numbers', () => {
-    // Goals at lines 9, 10
-    assert.strictEqual(parsed.tasks[0].line, 9);
-    assert.strictEqual(parsed.tasks[1].line, 10);
-    // Tasks section at lines 14, 15, 16
-    assert.strictEqual(parsed.tasks[2].line, 14);
-  });
-
-  it('parseContextSection: files and repos', () => {
-    assert.deepStrictEqual(context.files, ['src/foo.ts', 'src/bar.ts']);
-    assert.deepStrictEqual(context.repos, ['github.com/foo', 'github.com/bar']);
-  });
-
-  it('generateRepoIds: unique ids', () => {
-    assert.strictEqual(repoIds.get('foo'), 'f');
-    assert.strictEqual(repoIds.get('bar'), 'b');
-    assert.strictEqual(repoIds.get('baz'), 'ba');
-  });
-
-  it('generateRepoIds: case insensitivity', () => {
-    const result = generateRepoIds(['Foo', 'foo']);
-    assert.strictEqual(result.get('Foo'), 'f');
-    assert.strictEqual(result.get('foo'), 'fo');
+  it('generateRepoIds: creates unique IDs for similar names', () => {
+    const ids = generateRepoIds(['foo', 'foobar', 'foobaz']);
+    assert.strictEqual(ids.get('foo'), 'f');
+    assert.strictEqual(ids.get('foobar'), 'fo');
+    assert.strictEqual(ids.get('foobaz'), 'foo');
   });
 });

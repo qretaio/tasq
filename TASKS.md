@@ -14,8 +14,13 @@ files: README.md, package.json, src/\*_/_.ts
 - [x] Configure bun for development mode
 - [x] Test CLI build and functionality
 - [x] Trim codebase - remove duplicated code, consolidate patterns
-- [ ] Add support for extracting TASKS from README.md
+- [x] Add support for extracting TASKS from README.md
+- [ ] Add `tasq watch <parent-dir>` command to add given directory to `tasq` scan list.
 - [ ] Add more intelligent context so that the agents need to explore less
 - [ ] Verify that tasq command is working as expected with multi-tasks delegation
 - [ ] Publish a blog post on what this is, how this helps and why one should use it.
 - [ ] Add support for opencode
+
+## Future
+
+- [ ] Remote collaboration

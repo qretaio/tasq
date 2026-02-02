@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
 import { spawn } from 'node:child_process';
 import { groupTasksByStatus, type TaskStatus, type Task } from './types.js';
@@ -52,8 +51,24 @@ function renderTasksGrouped(
       continue;
     }
 
-    const sectionTitle = section.charAt(0).toUpperCase() + section.slice(1);
-    console.log(`## ${sectionTitle}`);
+    // Special handling for 'readme' section
+    if (section === 'readme') {
+      console.log(`# README`);
+      // Get readmeContext from the first task (all readme tasks share the same context)
+      const readmeContext = sectionTasks[0]?.readmeContext;
+      if (readmeContext?.description) {
+        console.log(`${readmeContext.description}`);
+      }
+      console.log();
+      console.log(`## Tasks`);
+      if (readmeContext?.tasksDescription) {
+        console.log(`${readmeContext.tasksDescription}`);
+      }
+      console.log();
+    } else {
+      const sectionTitle = section.charAt(0).toUpperCase() + section.slice(1);
+      console.log(`## ${sectionTitle}`);
+    }
 
     const activeTasks = [...grouped.pending, ...grouped.inProgress];
     const toShow = maxItems !== undefined ? activeTasks.slice(0, maxItems) : activeTasks;

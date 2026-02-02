@@ -12,7 +12,7 @@ import {
   type ParsedTasks,
   type ProjectResult,
 } from './types.js';
-import { parseTasks, parseContextSection, generateRepoIds, parseTasksSection } from './parser.js';
+import { parseTasks, parseContextSection, generateRepoIds } from './parser.js';
 import { gatherFullContext } from './context.js';
 
 const TASKS_MD = 'TASKS.md';
@@ -22,10 +22,49 @@ export function getRepoBase(): string {
 }
 
 export async function readTasks(): Promise<ParsedTasks | null> {
-  const path = join(getRepoBase(), TASKS_MD);
-  if (!existsSync(path)) return null;
-  const content = await readFile(path, 'utf-8');
-  return parseTasks(content);
+  const tasksPath = join(getRepoBase(), TASKS_MD);
+  const readmePath = join(getRepoBase(), 'README.md');
+
+  let result: ParsedTasks | null = null;
+
+  if (existsSync(tasksPath)) {
+    const content = await readFile(tasksPath, 'utf-8');
+    result = parseTasks(content);
+  }
+
+  if (existsSync(readmePath)) {
+    const readmeContent = await readFile(readmePath, 'utf-8');
+    const readmeParsed = parseTasks(readmeContent);
+
+    // Filter README.md to only tasks from ## Tasks section
+    const readmeContext = {
+      description: readmeParsed.description,
+      tasksDescription: readmeParsed.notes,
+    };
+    const readmeTasks = readmeParsed.tasks
+      .filter((t) => t.section === 'tasks')
+      .map((t) => ({ ...t, section: 'readme' as const, readmeContext }));
+
+    if (readmeTasks.length > 0) {
+      if (!result) {
+        // No TASKS.md, create minimal result with only README ## Tasks
+        const nameMatch = readmeContent.match(/^#\s+(.+)$/m);
+        result = {
+          name: nameMatch ? nameMatch[1] : basename(getRepoBase()),
+          description: '',
+          notes: '',
+          goals: [],
+          tasks: readmeTasks,
+          lines: readmeParsed.lines,
+        };
+      } else {
+        // Merge README.md tasks into result with 'readme' section
+        result.tasks.push(...readmeTasks);
+      }
+    }
+  }
+
+  return result;
 }
 
 export function readTasksSync(filePath: string): ParsedTasks | null {
@@ -81,47 +120,69 @@ export async function scanAllTasks(scanPaths: string[]): Promise<ProjectResult[]
     }),
   ]);
 
-  // Track project dirs to avoid duplicates (prefer TASKS.md over README.md)
-  const seenProjectDirs = new Set<string>();
+  // Map projectDir -> ProjectResult for merging README tasks
+  const projectMap = new Map<string, ProjectResult>();
 
   // Process TASKS.md files
-  const tasksResults = await Promise.all(
-    tasksFiles.map(async (file) => {
-      try {
-        const content = await readFile(file, 'utf-8');
-        const parsed = parseTasks(content);
-        const projectDir = dirname(file);
-        seenProjectDirs.add(projectDir);
-        const projectName = basename(projectDir);
-        const relPath = projectDir.replace(homedir(), '~');
-        return { path: file, projectName, relPath, parsed, tasks: parsed.tasks };
-      } catch {
-        return null;
+  for (const file of tasksFiles) {
+    try {
+      const content = await readFile(file, 'utf-8');
+      const parsed = parseTasks(content);
+      const projectDir = dirname(file);
+      const projectName = basename(projectDir);
+      const relPath = projectDir.replace(homedir(), '~');
+      projectMap.set(projectDir, {
+        path: file,
+        projectName,
+        relPath,
+        parsed,
+        tasks: parsed.tasks,
+      });
+    } catch {
+      // Skip files that can't be parsed
+    }
+  }
+
+  // Process README.md files and merge with existing TASKS.md results
+  for (const file of readmeFiles) {
+    try {
+      const projectDir = dirname(file);
+      const content = await readFile(file, 'utf-8');
+      const parsed = parseTasks(content);
+      // Filter to only tasks from ## Tasks section and set section to 'readme'
+      const readmeContext = {
+        description: parsed.description,
+        tasksDescription: parsed.notes,
+      };
+      const readmeTasks = parsed.tasks
+        .filter((t) => t.section === 'tasks')
+        .map((t) => ({ ...t, section: 'readme' as const, readmeContext }));
+
+      if (readmeTasks.length === 0) continue; // Skip if no tasks found
+
+      const projectName = basename(projectDir);
+      const relPath = projectDir.replace(homedir(), '~');
+
+      const existing = projectMap.get(projectDir);
+      if (existing) {
+        // Merge README tasks into existing TASKS.md result
+        existing.tasks.push(...readmeTasks);
+      } else {
+        // No TASKS.md, create new result from README.md
+        projectMap.set(projectDir, {
+          path: file,
+          projectName,
+          relPath,
+          parsed,
+          tasks: readmeTasks,
+        });
       }
-    })
-  );
+    } catch {
+      // Skip files that can't be parsed
+    }
+  }
 
-  // Process README.md files (only if no TASKS.md in same dir)
-  const readmeResults = await Promise.all(
-    readmeFiles.map(async (file) => {
-      try {
-        const projectDir = dirname(file);
-        if (seenProjectDirs.has(projectDir)) return null; // Skip if TASKS.md exists
-
-        const content = await readFile(file, 'utf-8');
-        const parsed = parseTasksSection(content);
-        if (parsed.tasks.length === 0) return null; // Skip if no tasks found
-
-        const projectName = basename(projectDir);
-        const relPath = projectDir.replace(homedir(), '~');
-        return { path: file, projectName, relPath, parsed, tasks: parsed.tasks };
-      } catch {
-        return null;
-      }
-    })
-  );
-
-  return [...tasksResults, ...readmeResults].filter((r): r is ProjectResult => r !== null);
+  return Array.from(projectMap.values());
 }
 
 export async function scanAllTasksWithIds(

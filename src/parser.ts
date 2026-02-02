@@ -1,10 +1,4 @@
-import {
-  STATUS_MAP,
-  type ParsedTasks,
-  type Task,
-  type TaskStatus,
-  type ContextSection,
-} from './types.js';
+import { STATUS_MAP, type ParsedTasks, type Task, type ContextSection } from './types.js';
 
 export function parseTasks(content: string): ParsedTasks {
   const lines = content.split('\n');
@@ -19,11 +13,19 @@ export function parseTasks(content: string): ParsedTasks {
 
   let currentSection: string | null = null;
   let inTasks = false;
-  let foundFirstTask = false;
+  let foundFirstTaskInSection = false;
+  let inCodeBlock = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
+
+    // Track code blocks
+    if (trimmed.startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
 
     if (trimmed.startsWith('# ')) {
       result.name = trimmed.replace(/^#\s+/, '');
@@ -32,6 +34,7 @@ export function parseTasks(content: string): ParsedTasks {
       const section = trimmed.replace(/^##\s+/, '').toLowerCase();
       currentSection = section;
       inTasks = section === 'tasks';
+      foundFirstTaskInSection = false; // Reset when entering a new section
     } else if (trimmed.startsWith('- ')) {
       const match = trimmed.match(/^\-\s*\[([x~ ]?)\]\s*(.*)/);
       if (match) {
@@ -39,7 +42,7 @@ export function parseTasks(content: string): ParsedTasks {
         const description = match[2].trim();
         const task: Task = { line: i, status, description };
 
-        foundFirstTask = true;
+        foundFirstTaskInSection = true;
 
         // All sections contribute to tasks, not just ## Tasks
         // But goals are also kept separately for backward compatibility
@@ -50,9 +53,20 @@ export function parseTasks(content: string): ParsedTasks {
           currentSection === 'header' || currentSection === null ? undefined : currentSection;
         result.tasks.push(task);
       }
-    } else if (currentSection === 'header' && line && !line.startsWith('#')) {
+    } else if (
+      currentSection === 'header' &&
+      line &&
+      !line.startsWith('#') &&
+      !trimmed.startsWith('-')
+    ) {
       result.description += (result.description ? '\n' : '') + line;
-    } else if (inTasks && !foundFirstTask && line && !line.startsWith('#')) {
+    } else if (
+      inTasks &&
+      !foundFirstTaskInSection &&
+      line &&
+      !line.startsWith('#') &&
+      !trimmed.startsWith('-')
+    ) {
       result.notes += (result.notes ? '\n' : '') + line;
     }
   }
@@ -118,55 +132,4 @@ export function generateRepoIds(projectNames: string[]): Map<string, string> {
   }
 
   return ids;
-}
-
-export function parseTasksSection(content: string): ParsedTasks {
-  const lines = content.split('\n');
-  const result: ParsedTasks = {
-    name: '',
-    description: '',
-    notes: '',
-    goals: [],
-    tasks: [],
-    lines: [],
-  };
-
-  let inTasks = false;
-  let lineOffset = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    if (trimmed.toLowerCase().startsWith('## tasks')) {
-      inTasks = true;
-      lineOffset = i;
-      continue;
-    }
-
-    if (inTasks && trimmed.startsWith('## ')) {
-      // End of tasks section
-      break;
-    }
-
-    if (!inTasks) continue;
-
-    result.lines.push(line);
-
-    if (trimmed.startsWith('- ')) {
-      const match = trimmed.match(/^\-\s*\[([x~ ]?)\]\s*(.*)/);
-      if (match) {
-        const status = STATUS_MAP[match[1]] || 'pending';
-        const description = match[2].trim();
-        result.tasks.push({
-          line: i - lineOffset,
-          status,
-          description,
-          section: 'tasks',
-        });
-      }
-    }
-  }
-
-  return result;
 }

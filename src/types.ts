@@ -1,5 +1,10 @@
 export type TaskStatus = 'pending' | 'in-progress' | 'completed';
 
+export interface ReadmeContext {
+  description: string;
+  tasksDescription: string;
+}
+
 export interface Task {
   line: number;
   status: TaskStatus;
@@ -7,6 +12,7 @@ export interface Task {
   goal?: string;
   id?: string;
   section?: string;
+  readmeContext?: ReadmeContext;
 }
 
 export interface ParsedTasks {

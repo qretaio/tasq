@@ -9,6 +9,12 @@ A powerful task tracking CLI that uses markdown files (TASKS.md) for managing ta
 - **Context-aware AI delegation** - Gathers project context and delegates to Claude Code CLI
 - **Zero-config discovery** - Automatically detects project types, dependencies, and structure
 
+## Tasks
+
+Task items from this section will be processed by `tasq` cli.
+
+- [ ] Create a Kanban board for task management
+
 ## Installation
 
 ### Prerequisites
@@ -72,36 +78,6 @@ tasq do 1
 # Mark task as complete
 tasq done 1
 ```
-
-## TASKS.md Format
-
-```markdown
-# Project Name
-
-Brief description of the project.
-
-## Goals
-
-- [ ] Goal 1
-- [x] Goal 2
-
-## Tasks
-
-- [ ] Task 1 description
-- [~] Task in progress
-- [x] Completed task
-
-## Context
-
-files: src/\*_/_.ts, README.md
-repos: ../related-project
-```
-
-### Task Status
-
-- `[ ]` - Pending
-- `[~]` - In progress
-- `[x]` - Completed
 
 ## Commands
 
