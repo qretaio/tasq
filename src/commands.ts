@@ -322,3 +322,15 @@ export async function cmdDo(args: { identifier?: string; dry?: boolean }): Promi
     }
   });
 }
+
+export async function cmdWatch(args: { directory?: string }): Promise<void> {
+  const directory = args.directory;
+  if (!directory) {
+    console.error('Usage: tasq watch <directory>');
+    console.error('  directory: Path to directory to watch for tasks');
+    process.exit(1);
+  }
+
+  addScanPath(directory);
+  console.log(`Added scan path: ${directory}`);
+}

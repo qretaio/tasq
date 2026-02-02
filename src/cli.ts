@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { cmdInit, cmdList, cmdAdd, cmdStatus, cmdConfig, cmdDo } from './commands.js';
+import { cmdInit, cmdList, cmdAdd, cmdStatus, cmdConfig, cmdDo, cmdWatch } from './commands.js';
 
 export function run(): void {
   yargs(hideBin(process.argv))
@@ -92,6 +92,15 @@ export function run(): void {
         cmdConfig({
           action: (argv._[1] as string) || 'show',
           path: (argv.path as string) || (argv._[2] as string),
+        })
+    )
+    .command(
+      'watch <directory>',
+      'Add directory to scan list',
+      (y) => y.positional('directory', { type: 'string', describe: 'Directory path to watch' }),
+      (argv) =>
+        cmdWatch({
+          directory: (argv.directory as string) || (argv._[1] as string),
         })
     )
     .parse();
