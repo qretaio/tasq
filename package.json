@@ -1,0 +1,62 @@
+{
+  "name": "@qretaio/tasq",
+  "version": "2.0.0",
+  "description": "Task tracking CLI using TASKS.md files with context-aware AI delegation",
+  "author": "Qreta Dev <qretadev@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "tasks",
+    "todo",
+    "cli",
+    "task-tracking",
+    "markdown",
+    "ai",
+    "claude",
+    "productivity"
+  ],
+  "bin": {
+    "tasq": "./dist/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qretaio/tasq.git"
+  },
+  "homepage": "https://github.com/qretaio/tasq",
+  "bugs": {
+    "url": "https://github.com/qretaio/tasq/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "bun run src/cli.ts",
+    "prepublishOnly": "npm run build",
+    "test": "bun test",
+    "lint": "eslint src",
+    "fmt": "prettier --write src",
+    "fmt:check": "prettier --check src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "conf": "^15.0.2",
+    "fast-glob": "^3.3.3",
+    "yargs": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/yargs": "^17.0.33",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.0"
+  }
+}

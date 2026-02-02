@@ -1,0 +1,26 @@
+# Git
+.git
+.gitignore
+
+# Task tracking
+TASKS.md
+
+# Development
+*.log
+*.tmp
+.DS_Store
+.vscode
+.idea
+
+# Node (dependencies auto-installed by Deno)
+node_modules/
+deno.lock
+package-lock.json
+
+# Testing
+coverage/
+.nyc_output/
+
+# Documentation (internal)
+docs/
+*.md~
