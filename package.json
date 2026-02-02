@@ -1,5 +1,6 @@
 {
   "name": "@qretaio/tasq",
+  "type": "module",
   "version": "2.0.0",
   "description": "Task tracking CLI using TASKS.md files with context-aware AI delegation",
   "author": "Qreta Dev <qretadev@gmail.com>",
@@ -39,7 +40,7 @@
     "build": "tsc",
     "dev": "bun run src/cli.ts",
     "prepublishOnly": "npm run build",
-    "test": "bun test",
+    "test": "tsx --test ./**/*.test.ts",
     "lint": "eslint src",
     "fmt": "prettier --write src",
     "fmt:check": "prettier --check src",
@@ -57,6 +58,7 @@
     "@typescript-eslint/parser": "^8.24.1",
     "eslint": "^9.22.0",
     "prettier": "^3.5.3",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.0"
   }
 }
