@@ -16,6 +16,9 @@ files: README.md, package.json, src/\*_/_.ts
 - [x] Trim codebase - remove duplicated code, consolidate patterns
 - [x] Add support for extracting TASKS from README.md
 - [x] Add `tasq watch <parent-dir>` command to add given directory to `tasq` scan list.
+- [ ] Add `tasq unwatch <dir>` command for undoing above action
+- [ ] Render to string instead of stdout for context.
+- [ ] Render to string instead of stdout for lists.
 - [ ] Add more intelligent context so that the agents need to explore less
 - [ ] Verify that tasq command is working as expected with multi-tasks delegation
 - [ ] Publish a blog post on what this is, how this helps and why one should use it.
