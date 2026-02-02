@@ -28,8 +28,14 @@ describe('parser', () => {
     const parsed = parseTasks(readme);
 
     assert.strictEqual(parsed.name, '@qretaio/tasq');
-    assert.strictEqual(parsed.description, 'A powerful task tracking CLI that uses markdown files (TASKS.md) for managing tasks across multiple projects with intelligent context gathering for AI-assisted development.');
-    assert.strictEqual(parsed.notes, "Task items from this section will be processed by `tasq` cli.");
+    assert.strictEqual(
+      parsed.description,
+      'A powerful task tracking CLI that uses markdown files (TASKS.md) for managing tasks across multiple projects with intelligent context gathering for AI-assisted development.'
+    );
+    assert.strictEqual(
+      parsed.notes,
+      'Task items from this section will be processed by `tasq` cli.'
+    );
     assert.strictEqual(parsed.tasks.length, 1);
     assert.strictEqual(parsed.tasks[0]?.description, 'Create a Kanban board for task management');
   });

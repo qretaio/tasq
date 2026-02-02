@@ -20,6 +20,7 @@ files: README.md, package.json, src/\*_/_.ts
 - [ ] Verify that tasq command is working as expected with multi-tasks delegation
 - [ ] Publish a blog post on what this is, how this helps and why one should use it.
 - [ ] Add support for opencode
+- [ ] YOLO mode with the project sandbox
 
 ## Future
 
