@@ -1,6 +1,9 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { execSync } from 'node:child_process';
+/**
+ * Git context gathering for tasq
+ * Uses @qretaio/repo for git context to avoid duplication
+ */
+
+import { getGitContext as repoGetGitContext } from '@qretaio/repo';
 
 export interface GitContext {
   branch?: string;
@@ -8,55 +11,31 @@ export interface GitContext {
   lastCommit?: string;
 }
 
+/**
+ * Gather git context as a formatted string
+ * Uses @qretaio/repo's getGitContext and formats it for tasq
+ */
 export async function gatherGitContext(baseDir: string): Promise<string | null> {
-  const gitPath = join(baseDir, '.git');
-  if (!existsSync(gitPath)) {
+  const gitInfo = await repoGetGitContext(baseDir);
+  if (!gitInfo) {
     return null;
   }
 
   const context: string[] = [];
 
-  try {
-    // Get current branch
-    const branch = execSync('git branch --show-current', {
-      cwd: baseDir,
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'ignore'],
-    }).trim();
-    if (branch) {
-      context.push(`Branch: ${branch}`);
-    }
+  if (gitInfo.branch) {
+    context.push(`Branch: ${gitInfo.branch}`);
+  }
 
-    // Get git status summary
-    const status = execSync('git status --short', {
-      cwd: baseDir,
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'ignore'],
-    }).trim();
-    if (status) {
-      const lines = status.split('\n');
-      const staged = lines.filter(
-        (l) => l.startsWith('M ') || l.startsWith('A ') || l.startsWith('D ')
-      ).length;
-      const modified = lines.filter(
-        (l) => !l.startsWith('M ') && !l.startsWith('A ') && !l.startsWith('D ') && l.trim()
-      ).length;
-      if (staged > 0 || modified > 0) {
-        context.push(`Changes: ${staged} staged, ${modified} unstaged`);
-      }
+  if (gitInfo.status) {
+    const { staged, modified } = gitInfo.status;
+    if (staged > 0 || modified > 0) {
+      context.push(`Changes: ${staged} staged, ${modified} unstaged`);
     }
+  }
 
-    // Get recent commit message
-    const lastCommit = execSync('git log -1 --format="%s"', {
-      cwd: baseDir,
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'ignore'],
-    }).trim();
-    if (lastCommit) {
-      context.push(`Last commit: ${lastCommit}`);
-    }
-  } catch {
-    // Git commands may fail, skip silently
+  if (gitInfo.lastCommit) {
+    context.push(`Last commit: ${gitInfo.lastCommit}`);
   }
 
   return context.length > 0 ? context.join('\n') : null;
