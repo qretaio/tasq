@@ -93,6 +93,19 @@ export async function updateTaskStatus(
   return parsed;
 }
 
+export async function updateTaskStatusInFile(
+  filePath: string,
+  lineIndex: number,
+  status: TaskStatus
+): Promise<void> {
+  const content = await readFile(filePath, 'utf-8');
+  const lines = content.split('\n');
+  const line = lines[lineIndex];
+  const newLine = line.replace(/^\-\s*\[([x~ ]?)\]/, `- ${STATUS_MARKERS[status]}`);
+  lines[lineIndex] = newLine;
+  await writeFile(filePath, lines.join('\n'), 'utf-8');
+}
+
 export async function scanAllTasks(scanPaths: string[]): Promise<ProjectResult[]> {
   // Scan both TASKS.md and README.md files
   const tasksPatterns = scanPaths.map((p) => {

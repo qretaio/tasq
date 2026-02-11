@@ -1,10 +1,11 @@
-import { basename } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
 import { groupTasksByStatus, type TaskStatus, type Task } from './types.js';
 import {
   getRepoBase,
   readTasks,
   updateTaskStatus,
+  updateTaskStatusInFile,
   scanAllTasksWithIds,
   findTaskAcrossProjects,
   initTasks,
@@ -121,31 +122,6 @@ export async function cmdList(args: {
   pending?: boolean;
   all?: boolean;
 }): Promise<void> {
-  if (args.local) {
-    const parsed = await readTasks();
-    if (!parsed) {
-      console.log('No TASKS.md found. Run "tasq init" to create one.');
-      return;
-    }
-
-    console.log(`\n# ${parsed.name}`);
-    if (parsed.description) {
-      console.log(`${parsed.description}\n`);
-    }
-
-    // Combine goals and tasks for unified display
-    const allTasks = [...parsed.goals, ...parsed.tasks];
-    const counts = renderTasksGrouped(allTasks, {
-      showCompleted: !args.pending,
-      getId: (t) => String(t.line),
-    });
-
-    console.log(
-      `  ${counts.pending} pending, ${counts.inProgress} in progress, ${counts.completed} completed\n`
-    );
-    return;
-  }
-
   const scanPaths = getScanPaths();
   const results = await scanAllTasksWithIds(scanPaths);
 
@@ -155,11 +131,31 @@ export async function cmdList(args: {
     return;
   }
 
+  // Filter for local project if requested
+  const filteredResults = args.local
+    ? results.filter((r) => {
+        const projectDir = dirname(r.path);
+        return projectDir === getRepoBase();
+      })
+    : results;
+
+  if (filteredResults.length === 0) {
+    console.log('No TASKS.md found for this project.');
+    return;
+  }
+
+  if (results.length === 0) {
+    console.log('No TASKS.md files found.');
+    console.log('Run "tasq config add-path <path>" to add scan paths.');
+    return;
+  }
+
+  // Global mode: show all projects
   let totalPending = 0;
   let totalInProgress = 0;
   let totalCompleted = 0;
 
-  for (const { projectName, relPath, repoId, tasks } of results) {
+  for (const { projectName, relPath, repoId, tasks } of filteredResults) {
     const grouped = groupTasksByStatus(tasks);
 
     totalPending += grouped.pending.length;
@@ -188,7 +184,7 @@ export async function cmdList(args: {
   }
 
   console.log(
-    `\n${results.length} project(s) • ${totalPending} pending • ${totalInProgress} in progress • ${totalCompleted} completed\n`
+    `\n${filteredResults.length} project(s) • ${totalPending} pending • ${totalInProgress} in progress • ${totalCompleted} completed\n`
   );
 }
 
@@ -214,49 +210,24 @@ export async function cmdStatus(args: {
   command: 'done' | 'wip';
   identifier?: string;
 }): Promise<void> {
-  const parsed = await readTasks();
-  if (!parsed) {
-    console.error('No TASKS.md found.');
+  const identifier = args.identifier;
+  if (!identifier) {
+    console.error(`Usage: tasq ${args.command} <task-id>`);
+    console.error('  task-id: compact ID (e.g., p1, u2) or description substring');
     process.exit(1);
   }
 
-  const identifier = args.identifier;
-  if (!identifier) {
-    console.error(`Usage: tasq ${args.command} <id>`);
-    console.error('  id: task number or description substring');
+  const found = await findTaskAcrossProjects(identifier);
+  if (!found) {
+    console.error(`Task "${identifier}" not found.`);
     process.exit(1);
   }
 
   const newStatus: TaskStatus = args.command === 'done' ? 'completed' : 'in-progress';
 
-  let taskIndex = -1;
-  const num = Number.parseInt(identifier, 10);
-  if (!Number.isNaN(num)) {
-    const taskList = parsed.tasks.filter((t) => t.status !== 'completed');
-    if (num > 0 && num <= taskList.length) {
-      taskIndex = taskList[num - 1]!.line;
-    }
-  }
+  await updateTaskStatusInFile(found.path, found.task.line, newStatus);
 
-  if (taskIndex === -1) {
-    const task = parsed.tasks.find((t) =>
-      t.description.toLowerCase().includes(identifier.toLowerCase())
-    );
-    if (task) taskIndex = task.line;
-  }
-
-  if (taskIndex === -1) {
-    console.error(`Task "${identifier}" not found.`);
-    process.exit(1);
-  }
-
-  await updateTaskStatus(taskIndex, newStatus);
-
-  const line = parsed.lines[taskIndex]!;
-  const match = line.match(/^\-\s*\[([x~ ]?)\]\s*(.*)/);
-  const desc = match ? match[2] : '';
-
-  console.log(`${desc}: ${newStatus}`);
+  console.log(`[${found.task.id}] ${found.task.description}: ${newStatus}`);
 }
 
 export async function cmdConfig(args: { action: string; path?: string }): Promise<void> {

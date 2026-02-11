@@ -22,8 +22,6 @@ export {
 } from './core.js';
 export { parseTasks, parseContextSection, generateRepoIds } from './parser.js';
 export { getScanPaths, addScanPath } from './config.js';
-export {
-  gatherFullContext,
-} from './context.js';
+export { gatherFullContext } from './context.js';
 export { gatherGitContext } from './git.js';
 export { run } from './cli.js';
