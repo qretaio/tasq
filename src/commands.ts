@@ -12,7 +12,7 @@ import {
   addTask,
   buildOrchestratorPrompt,
 } from './core.js';
-import { getScanPaths, addScanPath } from './config.js';
+import { getScanPaths, addScanPath, removeScanPath } from './config.js';
 
 interface RenderOptions {
   showCompleted?: boolean;
@@ -304,4 +304,20 @@ export async function cmdWatch(args: { directory?: string }): Promise<void> {
 
   addScanPath(directory);
   console.log(`Added scan path: ${directory}`);
+}
+
+export async function cmdUnwatch(args: { directory?: string }): Promise<void> {
+  const directory = args.directory;
+  if (!directory) {
+    console.error('Usage: tasq unwatch <directory>');
+    console.error('  directory: Path to directory to stop watching');
+    process.exit(1);
+  }
+
+  const removed = removeScanPath(directory);
+  if (removed) {
+    console.log(`Removed scan path: ${directory}`);
+  } else {
+    console.log(`Scan path not found: ${directory}`);
+  }
 }

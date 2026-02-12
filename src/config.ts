@@ -20,3 +20,14 @@ export function addScanPath(path: string): void {
     config.set('scan_paths', paths);
   }
 }
+
+export function removeScanPath(path: string): boolean {
+  const paths = getScanPaths();
+  const index = paths.indexOf(path);
+  if (index !== -1) {
+    paths.splice(index, 1);
+    config.set('scan_paths', paths);
+    return true;
+  }
+  return false;
+}
