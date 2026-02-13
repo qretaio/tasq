@@ -259,7 +259,30 @@ export async function cmdConfig(args: { action: string; path?: string }): Promis
   }
 }
 
-export async function cmdDo(args: { identifier?: string; dry?: boolean }): Promise<void> {
+export type AITool = 'claude' | 'opencode';
+
+interface AIToolConfig {
+  command: string;
+  args: string[];
+  name: string;
+}
+
+function getAIToolConfig(aiTool: AITool): AIToolConfig {
+  switch (aiTool) {
+    case 'opencode':
+      return { command: 'opencode', args: ['run'], name: 'OpenCode' };
+    case 'claude':
+    default:
+      return { command: 'claude', args: [], name: 'Claude' };
+  }
+}
+
+export async function cmdDo(args: {
+  identifier?: string;
+  dry?: boolean;
+  aiTool?: AITool;
+}): Promise<void> {
+  const aiTool = args.aiTool || 'claude';
   const identifier = args.identifier;
   if (!identifier) {
     console.error('Usage: tasq do <task-id>');
@@ -276,11 +299,13 @@ export async function cmdDo(args: { identifier?: string; dry?: boolean }): Promi
   const prompt = await buildOrchestratorPrompt(found, args.dry || false);
 
   if (args.dry) {
+    console.log(`# AI Tool: ${aiTool}\n`);
     console.log(prompt);
     return;
   }
 
-  const child = spawn('claude', [], {
+  const config = getAIToolConfig(aiTool);
+  const child = spawn(config.command, config.args, {
     stdio: ['pipe', 'inherit', 'inherit'],
   });
 
@@ -289,7 +314,7 @@ export async function cmdDo(args: { identifier?: string; dry?: boolean }): Promi
 
   child.on('close', (code) => {
     if (code !== 0) {
-      console.error(`Claude exited with code ${code}`);
+      console.error(`${config.name} exited with code ${code}`);
     }
   });
 }

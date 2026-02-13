@@ -22,8 +22,8 @@ files: README.md, package.json, src/\*_/_.ts
 - [ ] Add more intelligent context so that the agents need to explore less
 - [ ] Use standard markdown parser for parsing
 - [ ] Publish a blog post on what this is, how this helps and why one should use it.
-- [ ] Add support for opencode
-- [ ] YOLO mode with the project sandbox
+- [x] Add support for opencode
+- [ ] YOLO mode with --yolo parameter
 
 ## Future
 

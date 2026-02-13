@@ -1,7 +1,16 @@
 #!/usr/bin/env node
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { cmdInit, cmdList, cmdAdd, cmdStatus, cmdConfig, cmdDo, cmdWatch, cmdUnwatch } from './commands.js';
+import {
+  cmdInit,
+  cmdList,
+  cmdAdd,
+  cmdStatus,
+  cmdConfig,
+  cmdDo,
+  cmdWatch,
+  cmdUnwatch,
+} from './commands.js';
 
 export function run(): void {
   yargs(hideBin(process.argv))
@@ -70,15 +79,18 @@ export function run(): void {
     )
     .command(
       'do [id]',
-      'Do task - delegate to Claude with context',
+      'Do task - delegate to AI with context',
       (y) =>
         y
           .positional('id', { type: 'string', describe: 'Task number or description' })
-          .option('dry', { type: 'boolean', describe: "Dry run - don't invoke Claude" }),
+          .option('dry', { type: 'boolean', describe: "Dry run - don't invoke AI tool" })
+          .option('claude', { type: 'boolean', describe: 'Use Claude (default)' })
+          .option('opencode', { type: 'boolean', describe: 'Use OpenCode' }),
       (argv) =>
         cmdDo({
           identifier: (argv.id as string) || (argv._[1] as string),
           dry: argv.dry as boolean,
+          aiTool: argv.opencode ? 'opencode' : 'claude',
         })
     )
     .command(
@@ -106,7 +118,8 @@ export function run(): void {
     .command(
       'unwatch <directory>',
       'Remove directory from scan list',
-      (y) => y.positional('directory', { type: 'string', describe: 'Directory path to stop watching' }),
+      (y) =>
+        y.positional('directory', { type: 'string', describe: 'Directory path to stop watching' }),
       (argv) =>
         cmdUnwatch({
           directory: (argv.directory as string) || (argv._[1] as string),
