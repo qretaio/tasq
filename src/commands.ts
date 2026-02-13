@@ -134,9 +134,9 @@ export async function cmdList(args: {
   // Filter for local project if requested
   const filteredResults = args.local
     ? results.filter((r) => {
-        const projectDir = dirname(r.path);
-        return projectDir === getRepoBase();
-      })
+      const projectDir = dirname(r.path);
+      return projectDir === getRepoBase();
+    })
     : results;
 
   if (filteredResults.length === 0) {
@@ -267,13 +267,21 @@ interface AIToolConfig {
   name: string;
 }
 
-function getAIToolConfig(aiTool: AITool): AIToolConfig {
+function getAIToolConfig(aiTool: AITool, yolo: boolean): AIToolConfig {
   switch (aiTool) {
     case 'opencode':
-      return { command: 'opencode', args: ['run'], name: 'OpenCode' };
+      return {
+        command: 'opencode',
+        args: ['run'],
+        name: 'OpenCode',
+      };
     case 'claude':
     default:
-      return { command: 'claude', args: [], name: 'Claude' };
+      return {
+        command: 'claude',
+        args: yolo ? ['--dangerously-skip-permissions'] : [],
+        name: 'Claude',
+      };
   }
 }
 
@@ -281,8 +289,10 @@ export async function cmdDo(args: {
   identifier?: string;
   dry?: boolean;
   aiTool?: AITool;
+  yolo?: boolean;
 }): Promise<void> {
   const aiTool = args.aiTool || 'claude';
+  const yolo = args.yolo || false;
   const identifier = args.identifier;
   if (!identifier) {
     console.error('Usage: tasq do <task-id>');
@@ -304,13 +314,10 @@ export async function cmdDo(args: {
     return;
   }
 
-  const config = getAIToolConfig(aiTool);
-  const child = spawn(config.command, config.args, {
-    stdio: ['pipe', 'inherit', 'inherit'],
+  const config = getAIToolConfig(aiTool, yolo, args.debug || false);
+  const child = spawn(config.command, [...config.args, prompt], {
+    stdio: 'inherit',
   });
-
-  child.stdin.write(prompt);
-  child.stdin.end();
 
   child.on('close', (code) => {
     if (code !== 0) {

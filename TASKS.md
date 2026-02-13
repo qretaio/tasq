@@ -17,13 +17,14 @@ files: README.md, package.json, src/\*_/_.ts
 - [x] Add support for extracting TASKS from README.md
 - [x] Add `tasq watch <parent-dir>` command to add given directory to `tasq` scan list.
 - [x] Add `tasq unwatch <dir>` command for undoing above action
+- [ ] BUG: starting of claude takes too long. Optimize this.
 - [ ] Render to string instead of stdout for context.
 - [ ] Render to string instead of stdout for lists.
 - [ ] Add more intelligent context so that the agents need to explore less
 - [ ] Use standard markdown parser for parsing
 - [ ] Publish a blog post on what this is, how this helps and why one should use it.
 - [x] Add support for opencode
-- [ ] YOLO mode with --yolo parameter
+- [x] YOLO mode with --yolo parameter
 
 ## Future
 

@@ -140,8 +140,10 @@ tasq done p1
 Delegate a task to Claude Code CLI with full project context.
 
 ```bash
-tasq do 1           # Invoke Claude with context
-tasq do p1 --dry    # Print prompt without invoking Claude
+tasq do 1              # Invoke Claude with context
+tasq do p1 --dry       # Print prompt without invoking Claude
+tasq do 1 --yolo       # Auto-accept all prompts (YOLO mode)
+tasq do 1 --opencode   # Use OpenCode instead of Claude
 ```
 
 The command gathers:

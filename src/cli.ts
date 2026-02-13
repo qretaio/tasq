@@ -85,12 +85,15 @@ export function run(): void {
           .positional('id', { type: 'string', describe: 'Task number or description' })
           .option('dry', { type: 'boolean', describe: "Dry run - don't invoke AI tool" })
           .option('claude', { type: 'boolean', describe: 'Use Claude (default)' })
-          .option('opencode', { type: 'boolean', describe: 'Use OpenCode' }),
+          .option('opencode', { type: 'boolean', describe: 'Use OpenCode' })
+          .option('yolo', { type: 'boolean', describe: 'YOLO mode - auto-accept all prompts' }),
       (argv) =>
         cmdDo({
           identifier: (argv.id as string) || (argv._[1] as string),
           dry: argv.dry as boolean,
           aiTool: argv.opencode ? 'opencode' : 'claude',
+          yolo: argv.yolo as boolean,
+          debug: argv.debug as boolean,
         })
     )
     .command(
