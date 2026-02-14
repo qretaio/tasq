@@ -93,7 +93,6 @@ export function run(): void {
           dry: argv.dry as boolean,
           aiTool: argv.opencode ? 'opencode' : 'claude',
           yolo: argv.yolo as boolean,
-          debug: argv.debug as boolean,
         })
     )
     .command(

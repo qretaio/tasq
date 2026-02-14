@@ -134,9 +134,9 @@ export async function cmdList(args: {
   // Filter for local project if requested
   const filteredResults = args.local
     ? results.filter((r) => {
-      const projectDir = dirname(r.path);
-      return projectDir === getRepoBase();
-    })
+        const projectDir = dirname(r.path);
+        return projectDir === getRepoBase();
+      })
     : results;
 
   if (filteredResults.length === 0) {
@@ -314,7 +314,7 @@ export async function cmdDo(args: {
     return;
   }
 
-  const config = getAIToolConfig(aiTool, yolo, args.debug || false);
+  const config = getAIToolConfig(aiTool, yolo);
   const child = spawn(config.command, [...config.args, prompt], {
     stdio: 'inherit',
   });

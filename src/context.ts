@@ -4,11 +4,20 @@
  */
 
 import type { ContextSection } from './types.js';
-import { gatherFullContext as repoGatherFullContext } from '@qretaio/repo';
+import {
+  gatherFullContext as repoGatherFullContext,
+  gatherIntelligenceContext,
+  formatIntelligenceSection,
+  type IntelligenceContext,
+  type ProjectTypeFlags,
+} from '@qretaio/repo';
+
+// Re-export types for external use
+export type { IntelligenceContext, ProjectTypeFlags } from '@qretaio/repo';
 
 /**
  * Gather full context for tasq's orchestrator prompt
- * Uses @qretaio/repo's gatherFullContext with tasq-specific options
+ * Uses @qretaio/repo's gatherFullContext which now includes intelligence section
  */
 export async function gatherFullContext(
   projectDir: string,
@@ -18,7 +27,7 @@ export async function gatherFullContext(
   _tasks: Array<{ id?: string; description: string; status: string }>,
   _task: { id?: string; description: string }
 ): Promise<string> {
-  // Use repo package's gatherFullContext with tasq-specific options
+  // Use repo package's gatherFullContext which now includes Project Intelligence section
   return repoGatherFullContext(projectDir, {
     includeReadme: true,
     includeConfig: true,
@@ -30,3 +39,18 @@ export async function gatherFullContext(
     maxFiles: 15,
   });
 }
+
+/**
+ * Gather only intelligent context (lightweight analysis)
+ * Useful for quick project analysis without full file context
+ */
+export async function gatherIntelligentContextOnly(
+  projectDir: string
+): Promise<IntelligenceContext> {
+  return gatherIntelligenceContext(projectDir);
+}
+
+/**
+ * Format intelligent context for display
+ */
+export { formatIntelligenceSection as formatIntelligentContext };
